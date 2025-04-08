@@ -44,51 +44,48 @@
     }
 
     .custom-file {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 10px 0;
-}
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 10px 0;
+    }
 
-.file-label {
-  background-color: #ff9800;
-  color: #121212;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-bottom: 5px;
-  transition: background 0.3s;
-}
+    .file-label {
+      background-color: #ff9800;
+      color: #121212;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 5px;
+      transition: background 0.3s;
+    }
 
-.file-label:hover {
-  background-color: #ffa733;
-}
+    .file-label:hover {
+      background-color: #ffa733;
+    }
 
-input[type="file"] {
-  display: none;
-}
+    input[type="file"] {
+      display: none;
+    }
 
-#fileNameDisplay {
-  margin-top: 8px;
-  text-align: center;
-  font-size: 0.9em;
-  color: #ccc;
-}
-
-
+    #fileNameDisplay {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 0.9em;
+      color: #ccc;
+    }
 
     small {
-  display: block;
-  margin: -5px auto 15px auto;
-  font-size: 0.85em;
-  color: #aaa;
-  text-align: center;
-  border-bottom: 1px solid #444;
-  padding-bottom: 5px;
-  width: 100%;
-}
-
+      display: block;
+      margin: -5px auto 15px auto;
+      font-size: 0.85em;
+      color: #aaa;
+      text-align: center;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+      width: 100%;
+    }
 
     .button-group {
       display: flex;
@@ -112,23 +109,6 @@ input[type="file"] {
       background-color: #ff9800;
     }
 
-    .custom-file-button {
-  display: inline-block;
-  background-color: orange;
-  color: #121212;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  text-align: center;
-  margin-top: 10px;
-}
-
-.custom-file-button:hover {
-  background-color: #ff9800;
-}
-
-
     .progress {
       margin-top: 15px;
       height: 10px;
@@ -145,12 +125,11 @@ input[type="file"] {
     }
 
     .output {
-  margin-top: 15px;
-  font-size: 0.9em;
-  word-wrap: break-word;
-  text-align: center; /* Center the output */
-}
-
+      margin-top: 15px;
+      font-size: 0.9em;
+      word-wrap: break-word;
+      text-align: center;
+    }
 
     @media (max-width: 600px) {
       .container {
@@ -171,14 +150,12 @@ input[type="file"] {
   <h1>XSecure File Encryptor</h1>
   <div class="container">
     <div class="custom-file">
-        <label for="fileInput" class="custom-file-button">Choose File</label>
-        <input type="file" id="fileInput" aria-label="Choose file" hidden />
-        <div class="output" id="fileNameDisplay"></div>
+      <label for="fileInput" class="custom-file-button">Choose File</label>
+      <input type="file" id="fileInput" aria-label="Choose file" hidden />
+      <div class="output" id="fileNameDisplay"></div>
+    </div>
 
-        
-      </div>
-      
-      <input
+    <input
       type="password"
       id="password"
       placeholder="Enter password (min. 8 characters)"
@@ -200,26 +177,24 @@ input[type="file"] {
   </div>
 
   <script>
-    const fileName = document.getElementById('fileName');
+    const fileInput = document.getElementById('fileInput');
     const passwordInput = document.getElementById('password');
     const fileInfo = document.getElementById('fileInfo');
     const statusOutput = document.getElementById('status');
     const progressBar = document.getElementById('progressBar');
 
-        fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      const fileNameDisplay = document.getElementById('fileNameDisplay');
 
-    if (file) {
+      if (file) {
         fileNameDisplay.textContent = `File: ${file.name}`;
         fileInfo.textContent = `Type: ${file.type || 'N/A'}, Size: ${file.size} bytes`;
-    } else {
+      } else {
         fileNameDisplay.textContent = '';
         fileInfo.textContent = '';
-    }
+      }
     });
-
-
 
     function resetAll() {
       fileInput.value = '';
@@ -227,6 +202,7 @@ input[type="file"] {
       fileInfo.textContent = '';
       statusOutput.textContent = '';
       progressBar.style.width = '0%';
+      document.getElementById('fileNameDisplay').textContent = '';
     }
 
     async function encryptFile() {
@@ -237,6 +213,7 @@ input[type="file"] {
         alert('Please select a file and enter a password.');
         return;
       }
+
       if (password.length < 8) {
         alert('Password must be at least 8 characters long.');
         return;
@@ -246,10 +223,18 @@ input[type="file"] {
       const key = await deriveKey(password);
       const iv = crypto.getRandomValues(new Uint8Array(12));
 
+      const encoder = new TextEncoder();
+      const metadata = encoder.encode(`${file.name}|${file.type}`);
+      const metadataLength = new Uint8Array([metadata.length]);
+      const combinedData = new Uint8Array(metadataLength.length + metadata.length + fileBuffer.byteLength);
+      combinedData.set(metadataLength, 0);
+      combinedData.set(metadata, metadataLength.length);
+      combinedData.set(new Uint8Array(fileBuffer), metadataLength.length + metadata.length);
+
       const encrypted = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv },
         key,
-        fileBuffer
+        combinedData
       );
 
       const encryptedBlob = new Blob([iv, new Uint8Array(encrypted)], { type: 'application/octet-stream' });
@@ -266,6 +251,7 @@ input[type="file"] {
         alert('Please select a file and enter a password.');
         return;
       }
+
       if (password.length < 8) {
         alert('Password must be at least 8 characters long.');
         return;
@@ -273,17 +259,24 @@ input[type="file"] {
 
       const fileBuffer = await file.arrayBuffer();
       const iv = fileBuffer.slice(0, 12);
-      const data = fileBuffer.slice(12);
+      const encryptedData = fileBuffer.slice(12);
       const key = await deriveKey(password);
 
       try {
         const decrypted = await crypto.subtle.decrypt(
           { name: 'AES-GCM', iv: new Uint8Array(iv) },
           key,
-          data
+          encryptedData
         );
-        const decryptedBlob = new Blob([decrypted], { type: 'application/octet-stream' });
-        downloadBlob(decryptedBlob, file.name.replace('.enc', ''));
+
+        const decryptedView = new Uint8Array(decrypted);
+        const metadataLength = decryptedView[0];
+        const metadata = new TextDecoder().decode(decryptedView.slice(1, 1 + metadataLength));
+        const [originalName, mimeType] = metadata.split('|');
+        const fileContent = decryptedView.slice(1 + metadataLength);
+        const decryptedBlob = new Blob([fileContent], { type: mimeType });
+
+        downloadBlob(decryptedBlob, originalName);
         progressBar.style.width = '100%';
         statusOutput.textContent = 'Decryption complete.';
       } catch (e) {
@@ -328,4 +321,3 @@ input[type="file"] {
   </script>
 </body>
 </html>
-
